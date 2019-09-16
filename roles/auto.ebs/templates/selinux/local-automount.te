@@ -1,0 +1,14 @@
+
+module local-automount 1.0;
+
+require {
+	type ldconfig_exec_t;
+	type automount_t;
+	type fixed_disk_device_t;
+	class blk_file getattr;
+	class file { execute execute_no_trans open read };
+}
+
+#============= automount_t ==============
+allow automount_t fixed_disk_device_t:blk_file getattr;
+allow automount_t ldconfig_exec_t:file { execute execute_no_trans open read };

@@ -1,0 +1,67 @@
+# $Id$
+---
+- name: auto.ebs config files
+  template:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    - { path: etc/auto.master.d/ebs.autofs, mode: "0644" }
+    - { path: etc/auto.ebs, mode: "0755" }
+    - { path: etc/auto.ebs-detach.sh, mode: "0755" }
+    - { path: usr/lib/systemd/system/auto.ebs-detach.service, mode: "0644" }
+    - { path: usr/lib/systemd/system/auto.ebs-detach.path, mode: "0644" }
+  notify: [ 'reload systemd', 'restart autofs' ]
+
+- name: enable auto.ebs-detach.service
+  service:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - auto.ebs-detach.service
+    - auto.ebs-detach.path
+  notify: [ 'reload systemd' ]
+
+- name: SELinux Policies
+  set_fact:
+    policies:
+      - local-automount
+
+- name: SELinux (*.te)
+  template:
+    src: "selinux/{{ item }}.te"
+    dest: "/etc/selinux/tmp/{{ item }}.te"
+  with_items:
+    - "{{ policies }}"
+  register: te
+  when: >
+    ansible_selinux is defined
+    and ansible_selinux != False
+    and ansible_selinux.status == 'enabled'
+
+- name: SELinux - checkmodule
+  command: >
+    chdir=/etc/selinux/tmp creates={{ item }}.mod
+    checkmodule -M -m -o {{ item }}.mod {{ item }}.te
+  with_items:
+    - "{{ policies }}"
+  register: mod
+  when: te.changed
+
+- name: SELinux - semodule_package
+  command: >
+    chdir=/etc/selinux/tmp creates={{ item }}.pp
+    semodule_package -o {{ item }}.pp -m {{ item }}.mod
+  with_items:
+    - "{{ policies }}"
+  register: pp
+  when: mod.changed
+
+- name: SELinux - semodule
+  command: >
+    chdir=/etc/selinux/tmp
+    semodule -i {{ item }}.pp
+  with_items:
+    - "{{ policies }}"
+  when: pp.changed

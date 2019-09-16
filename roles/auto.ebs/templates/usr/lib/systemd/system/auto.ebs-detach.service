@@ -1,0 +1,11 @@
+# $Id$
+[Unit]
+Description=/etc/auto.ebs-detach.sh
+After=autofs.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/auto.ebs-detach.sh
+
+[Install]
+WantedBy=multi-user.target

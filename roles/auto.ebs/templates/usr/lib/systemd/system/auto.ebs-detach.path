@@ -1,0 +1,9 @@
+# $Id$
+[Unit]
+Description=PathModified=/ebs/ /etc/auto.ebs-detach.sh
+
+[Path]
+PathModified=/ebs/
+
+[Install]
+WantedBy=multi-user.target

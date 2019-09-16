@@ -1,0 +1,7 @@
+# $Id$
+---
+- name: reload systemd
+  systemd: daemon_reload=yes
+
+- name: restart autofs
+  service: name=autofs enabled=yes state=restarted

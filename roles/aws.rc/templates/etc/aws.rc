@@ -1,0 +1,147 @@
+#!/bin/bash
+# ----------------------------------------------------------------------------
+# $Id$
+# ----------------------------------------------------------------------------
+# Functions
+# ----------------------------------------------------------------------------
+# metadata data
+metadata() {
+    curl -s http://169.254.169.254/latest/meta-data/$1
+}
+
+export ZONE=$(metadata placement/availability-zone)
+export REGION=$(echo ${ZONE} | sed 's/\(.*\)[a-z]/\1/')
+export INSTANCE=$(metadata instance-id)
+
+# ec2 command [argument ...]
+ec2() {
+    aws ec2 --region ${REGION} "$@"
+}
+
+# ec2-get-tag-value resource-id key
+ec2-get-tag-value() {
+    ec2 describe-tags \
+        --filters Name=resource-id,Values="$1" Name=key,Values="$2" \
+        --output text --query 'Tags[*].Value'
+}
+
+# ec2-set-tag-value resource-id key value
+ec2-set-tag-value() {
+    ec2 delete-tags --resources "$1" --tags Key="$2"
+    ec2 create-tags --resources "$1" --tags Key="$2",Value="$3"
+}
+
+# ec2-get-volume-state volume-id
+ec2-get-volume-state() {
+    ec2 describe-volumes \
+        --volume-ids "$1" \
+        --output text --query 'Volumes[].State'
+}
+
+# ec2-get-volume-attachment-instance volume-id
+ec2-get-volume-attachment-instance() {
+    local value=$(ec2 describe-volumes \
+                      --volume-ids "$1" \
+                      --query 'Volumes[].Attachments[].InstanceId' \
+                      --output text)
+
+    echo ${value}
+}
+
+# ec2-get-volume-attachment-state volume-id
+ec2-get-volume-attachment-state() {
+    local value=$(ec2 describe-volumes \
+                      --volume-ids "$1" \
+                      --query 'Volumes[].Attachments[].State' \
+                      --output text)
+
+    echo ${value}
+}
+
+# ec2-get-volume-attachment-device volume-id
+ec2-get-volume-attachment-device() {
+    local value=$(ec2 describe-volumes \
+                      --volume-ids "$1" \
+                      --query 'Volumes[].Attachments[].Device' \
+                      --output text)
+
+    echo ${value}
+}
+
+# ec2-attach-volume volume-id device
+ec2-attach-volume() {
+    echo $0: $(ec2 attach-volume \
+                   --instance-id ${INSTANCE} --volume-id "$1" --device "$2" \
+                   --query '[Device,State,VolumeId]' \
+                   --output text) 1>&2
+    ec2 wait volume-in-use --volume-ids "$1"
+
+    while [ "$(ec2-get-volume-attachment-state $1)" != "attached" ]; do
+        sleep 15
+    done
+}
+
+# ec2-detach-volume volume-id
+ec2-detach-volume() {
+    echo $0: $(ec2 detach-volume \
+                   --instance-id ${INSTANCE} --volume-id "$1" \
+                   --query '[Device,State,VolumeId]' \
+                   --output text) 1>&2
+    ec2 wait volume-available --volume-ids "$1"
+}
+
+# list-attached-volumes
+list-attached-volumes() {
+    local value=$(ec2 describe-instances \
+                      --instance-ids ${INSTANCE} \
+                      --output text \
+                      --query 'Reservations[].Instances[].BlockDeviceMappings[].Ebs.VolumeId')
+
+    echo ${value}
+}
+
+# next-unattached-block-device
+next-unattached-block-device() {
+    local attached=($(lsblk -ndo NAME))
+    local available=($(echo -e ${attached[0]:0:-1}{a..z}\\n))
+
+    for name in "${attached[@]}"; do
+        available=(${available[@]//*${name}*})
+    done
+
+    echo /dev/${available[0]}
+}
+
+# volume-mkfs volume-id device fstype
+volume-mkfs() {
+    mkfs -t "$3" "$2"
+
+    local uuid=""
+    while [ -z "${uuid}" ]; do
+        uuid=$(lsblk -no UUID ${device})
+        sleep 10
+    done
+
+    ec2-set-tag-value "$1" fstype "$3"
+    ec2-set-tag-value "$1" uuid ${uuid}
+}
+
+# new-volume-mkfs volume-type size fstype
+new-volume-mkfs() {
+    local volume=$(ec2 create-volume \
+                       --availability-zone ${ZONE} \
+                       --volume-type "$1" --size "$2" \
+                       --output text --query 'VolumeId')
+
+    ec2 wait volume-available --volume-ids ${volume}
+
+    local device=$(next-unattached-block-device)
+
+    ec2-attach-volume ${volume} ${device} 1>&2
+
+    volume-mkfs ${volume} ${device} "$3" 1>&2
+
+    ec2-detach-volume ${volume} 1>&2
+
+    echo ${volume}
+}

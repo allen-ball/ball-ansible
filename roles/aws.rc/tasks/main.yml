@@ -1,0 +1,9 @@
+# $Id$
+---
+- name: aws.rc scripts
+  template:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    - { path: etc/aws.rc, mode: "0644" }

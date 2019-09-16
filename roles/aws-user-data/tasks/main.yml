@@ -1,0 +1,6 @@
+# $Id$
+---
+- name: user-data script
+  set_fact:
+    user_data: >
+      {{ lookup('template', 'user-data.bash') }}

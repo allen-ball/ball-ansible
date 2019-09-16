@@ -1,0 +1,7 @@
+# $Id$
+---
+- name: /etc/yum.repos.d/dovecot.repo (https://repo.dovecot.org/)
+  template:
+    src: etc/yum.repos.d/dovecot.repo
+    dest: /etc/yum.repos.d/dovecot.repo
+    mode: 0644

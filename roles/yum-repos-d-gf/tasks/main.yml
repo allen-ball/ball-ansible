@@ -1,0 +1,13 @@
+# $Id$
+---
+- name: /etc/yum.repos.d/gf.repo
+  yum:
+    name: http://mirror.ghettoforge.org/distributions/gf/gf-release-latest.gf.el7.noarch.rpm
+    state: latest
+
+- name: Enable GhettoForge-plus repository
+  ini_file:
+    dest: /etc/yum.repos.d/gf.repo
+    section: gf-plus
+    option: enabled
+    value: "1"

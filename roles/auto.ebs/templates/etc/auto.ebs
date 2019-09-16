@@ -1,0 +1,61 @@
+#!/bin/bash
+# ----------------------------------------------------------------------------
+# $Id$
+# ----------------------------------------------------------------------------
+#
+# exec 1> >(logger -s -t $(basename $0)) 2>&1
+. /etc/aws.rc
+
+# auto-ebs-entry key(volume)
+auto-ebs-entry() {
+    local key="$1"
+    local value=""
+
+    local fstype=$(ec2-get-tag-value ${key} fstype)
+    local uuid=$(ec2-get-tag-value ${key} uuid)
+
+    case $(ec2-get-volume-state ${key}) in
+        available)
+            if [ "${fstype}" != "" -a "${uuid}" != "" ]; then
+                ec2-attach-volume ${key} $(next-unattached-block-device) 1>&2
+
+                value="-fstype=${fstype} :UUID=${uuid}"
+            fi
+            ;;
+
+        in-use)
+            local instance="$(ec2-get-volume-attachment-instance ${key})"
+            local state="$(ec2-get-volume-attachment-state ${key})"
+
+            if [ "${instance}" == "${INSTANCE}" -a "${state}" == "attached" ]; then
+                local device="$(ec2-get-volume-attachment-device ${key})"
+
+                if [ "$(metadata block-device-mapping/ami)" == "${device}" ]; then
+                    value="-fstype=bind,symlink :/"
+                else
+                    local mntpt=$(lsblk -no MOUNTPOINT ${device})
+
+                    if [ "${mntpt}" != "" ]; then
+                        value="-fstype=bind,symlink :${mntpt}"
+                    elif [ "${fstype}" != "" -a "${uuid}" != "" ]; then
+                        value="-fstype=${fstype} :UUID=${uuid}"
+                    fi
+                fi
+            else
+                echo "$0: ${key} already in-use" 1>&2
+            fi
+            ;;
+
+        *)
+            echo "$0: Cannot mount ${key}" 1>&2
+            ;;
+    esac
+
+    echo "$0: key=\"${key}\" value=\"${value}\"" 1>&2
+
+    if [ "${value}" != "" ]; then
+        echo "${value}"
+    fi
+}
+
+auto-ebs-entry $1
