@@ -1,7 +1,7 @@
 # $Id$
 ---
 - name: /etc/yum.repos.d/gf.repo
-  yum:
+  package:
     name: http://mirror.ghettoforge.org/distributions/gf/gf-release-latest.gf.el7.noarch.rpm
     state: latest
 

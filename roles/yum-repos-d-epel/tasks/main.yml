@@ -1,6 +1,6 @@
 # $Id$
 ---
 - name: /etc/yum.repos.d/epel.repo
-  yum:
+  package:
     name: epel-release
     state: latest

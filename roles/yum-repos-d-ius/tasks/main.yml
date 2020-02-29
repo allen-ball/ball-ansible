@@ -1,6 +1,6 @@
 # $Id$
 ---
 - name: /etc/yum.repos.d/ius.repo
-  yum:
+  package:
     name: https://centos7.iuscommunity.org/ius-release.rpm
     state: latest
