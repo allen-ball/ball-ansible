@@ -5,5 +5,5 @@
     src: "{{ item.path }}"
     dest: "/{{ item.path }}"
     mode: "{{ item.mode }}"
-  with_items:
+  loop:
     - { path: etc/aws.rc, mode: "0644" }

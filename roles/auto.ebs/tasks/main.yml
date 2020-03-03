@@ -5,7 +5,7 @@
     src: "{{ item.path }}"
     dest: "/{{ item.path }}"
     mode: "{{ item.mode }}"
-  with_items:
+  loop:
     - { path: etc/auto.master.d/ebs.autofs, mode: "0644" }
     - { path: etc/auto.ebs, mode: "0755" }
     - { path: etc/auto.ebs-detach.sh, mode: "0755" }
@@ -18,7 +18,7 @@
     name: "{{ item }}"
     enabled: yes
     state: started
-  with_items:
+  loop:
     - auto.ebs-detach.service
     - auto.ebs-detach.path
   notify: [ 'reload systemd' ]
@@ -32,36 +32,32 @@
   template:
     src: "selinux/{{ item }}.te"
     dest: "/etc/selinux/tmp/{{ item }}.te"
-  with_items:
-    - "{{ policies }}"
+  loop: "{{ policies }}"
+  when:
+    - ansible_selinux is defined
+    - ansible_selinux != False
+    - ansible_selinux.status == 'enabled'
   register: te
-  when: >
-    ansible_selinux is defined
-    and ansible_selinux != False
-    and ansible_selinux.status == 'enabled'
 
 - name: SELinux - checkmodule
   command: >
     chdir=/etc/selinux/tmp creates={{ item }}.mod
     checkmodule -M -m -o {{ item }}.mod {{ item }}.te
-  with_items:
-    - "{{ policies }}"
-  register: mod
+  loop: "{{ policies }}"
   when: te.changed
+  register: mod
 
 - name: SELinux - semodule_package
   command: >
     chdir=/etc/selinux/tmp creates={{ item }}.pp
     semodule_package -o {{ item }}.pp -m {{ item }}.mod
-  with_items:
-    - "{{ policies }}"
-  register: pp
+  loop: "{{ policies }}"
   when: mod.changed
+  register: pp
 
 - name: SELinux - semodule
   command: >
     chdir=/etc/selinux/tmp
     semodule -i {{ item }}.pp
-  with_items:
-    - "{{ policies }}"
   when: pp.changed
+  loop: "{{ policies }}"
