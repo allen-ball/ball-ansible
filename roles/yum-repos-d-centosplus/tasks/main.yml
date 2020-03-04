@@ -1,9 +1,0 @@
-# $Id$
----
-- name: Enable CentOS-Plus repository
-  ini_file:
-    dest: /etc/yum.repos.d/CentOS-Base.repo
-    create: no
-    section: centosplus
-    option: enabled
-    value: "1"
