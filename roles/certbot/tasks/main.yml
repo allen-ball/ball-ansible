@@ -1,0 +1,104 @@
+# $Id: main.yml 5549 2020-03-13 15:23:12Z ball $
+---
+- name: Project Parameters
+  set_fact:
+    profile: "{{ lookup('env', 'AWS_PROFILE') }}"
+    private_ip: "{{ ansible_default_ipv4.address }}"
+    public_ips: []
+    domains: []
+##############################################################################
+# public_ips
+##############################################################################
+- name: ec2_eni_info
+  ec2_eni_info:
+    filters:
+      attachment.instance-id: "{{ hostvars[private_ip].instance_id }}"
+      private-ip-address: "{{ private_ip }}"
+  delegate_to: localhost
+  become: no
+  register: ec2_eni_info
+
+- name: ec2_eni_info public_ips
+  vars:
+    json: "{{ ec2_eni_info }}"
+    query: "network_interfaces[].association.public_ip"
+  set_fact:
+    public_ips: "{{ (public_ips | default([])) + (json | json_query(query)) }}"
+##############################################################################
+# domains
+##############################################################################
+- name: gcp_dns_managed_zone_info
+  gcp_dns_managed_zone_info:
+  delegate_to: localhost
+  become: no
+  register: gcp_dns_managed_zone_info
+
+- name: gcp_dns_resource_record_set_info
+  gcp_dns_resource_record_set_info:
+    managed_zone: "{{ item }}"
+  loop: "{{ gcp_dns_managed_zone_info.resources }}"
+  loop_control:
+    label: "{{ item.dnsName }}"
+  delegate_to: localhost
+  become: no
+  register: gcp_dns_resource_record_set_info
+
+- name: domains (A)
+  vars:
+    json: "{{ gcp_dns_resource_record_set_info.results }}"
+    query: "[].resources[] | [?type=='A']"
+  set_fact:
+    domains: "{{ domains + [ item.name ] }}"
+  loop: "{{ json | json_query(query) }}"
+  when:
+    - item.rrdatas | intersect(public_ips) | length
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: domains (CNAME)
+  vars:
+    json: "{{ gcp_dns_resource_record_set_info.results }}"
+    query: "[].resources[] | [?type=='CNAME']"
+  set_fact:
+    domains: "{{ domains + [ item.name ] }}"
+  loop: "{{ json | json_query(query) }}"
+  when:
+    - item.rrdatas | intersect(domains) | length
+  loop_control:
+    label: "{{ item.name }}"
+##############################################################################
+# certbot
+##############################################################################
+- name: pip3 certbot install
+  pip:
+    name:
+      - certbot
+    executable: pip3
+    state: "{{ domains | length | ternary('latest', 'absent') }}"
+
+- name: certbot certonly
+  vars:
+    name: "{{ private_ip }}"
+    email: "certbot@{{ domains[0] | regex_replace('[.]$', '') }}"
+  command:
+    cmd: >
+      /usr/local/bin/certbot certonly --cert-name {{ name }}
+                             --standalone --noninteractive
+                             --renew-with-new-domains
+                             --agree-tos --email {{ email }}
+                             {% for domain in domains %}
+                             --domain {{ domain | regex_replace('[.]$', '') }}
+                             {% endfor %}
+    creates: "/etc/letsencrypt/live/{{ name }}/privkey.pem"
+  when:
+    - domains | length
+
+- name: CRONTAB/certbot renew
+  cron:
+    name: certbot renew
+    state: "{{ domains | length | ternary('present', 'absent') }}"
+    minute: "0"
+    hour: "0,12"
+    job: >
+      python -c 'import random;import time;time.sleep(random.random()*3600)'
+      && /usr/local/bin/certbot renew --quiet --deploy-hook 'service postfix reload'
