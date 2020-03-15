@@ -1,5 +1,7 @@
 2020-03-15  Allen D. Ball  <ball@hcf.dev>
 
+	* roles/auto.ebs/tasks/main.yml: Install required packages.
+
 	* roles/aws-user-data/templates/user-data.bash:
 	Do not install python or pip if already installed.
 	Use "mount -a" instead of "shutdown -r now" at completion.
