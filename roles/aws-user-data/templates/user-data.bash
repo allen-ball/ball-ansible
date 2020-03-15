@@ -6,10 +6,17 @@ export LANG=en_US.UTF-8
 export LC_ALL=${LANG}
 
 yum -y update
-yum -y install python
-easy_install --prefix /usr pip
-pip install --prefix /usr --upgrade pip
-pip install --prefix /usr --upgrade awscli
+
+if [ ! -e /usr/libexec/platform-python]; then
+    yum -y install python
+fi
+
+if [ ! -e /usr/bin/pip -a -x /usr/bin/easy_install ]; then
+    /usr/bin/easy_install --prefix /usr pip
+fi
+
+/usr/bin/pip install --prefix /usr --upgrade pip
+/usr/bin/pip install --prefix /usr --upgrade awscli
 # ----------------------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------------------
@@ -74,7 +81,6 @@ if [ -n "${VOLUMES}" ]; then
     done
 fi
 
-#mount -a
-shutdown -r now
+mount -a
 
 exit 0
