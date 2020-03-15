@@ -1,5 +1,26 @@
 # $Id$
 ---
+- name: package install
+  package:
+    name:
+      - python36
+    state: latest
+
+- name: pip3 install
+  pip:
+    name:
+      - pip
+      - awscli
+      - apache-libcloud
+      - boto
+      - boto3
+      - crcmod
+      - dnspython
+      - netaddr
+      - pymysql
+    executable: pip3
+    state: latest
+
 - name: aws.rc scripts
   template:
     src: "{{ item.path }}"
