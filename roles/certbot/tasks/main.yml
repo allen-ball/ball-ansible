@@ -1,6 +1,6 @@
 # $Id: main.yml 5549 2020-03-13 15:23:12Z ball $
 ---
-- name: Project Parameters
+- name: Role Parameters
   set_fact:
     profile: "{{ lookup('env', 'AWS_PROFILE') }}"
     private_ip: "{{ ansible_default_ipv4.address }}"
