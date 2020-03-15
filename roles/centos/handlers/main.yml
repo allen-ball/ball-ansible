@@ -1,0 +1,13 @@
+# $Id: main.yml 5537 2020-03-09 18:23:00Z ball $
+---
+- name: restart autofs
+  service: name=autofs enabled=yes state=restarted
+
+- name: restart nfs
+  service: "name={{ item }} enabled=yes state=restarted"
+  loop:
+    - nfs-client
+    - nfs-server
+
+- name: restart postfix
+  service: name=postfix enabled=yes state=restarted

@@ -1,0 +1,118 @@
+# $Id: main.yml 5564 2020-03-15 22:43:06Z ball $
+---
+- name: centos_packages
+  vars:
+    version: 8.1-1.1911.0.8.el8
+    major: "{{ version | regex_replace('^([0-9]+)[.].*$', '\\1') }}"
+    arch: "{{ ansible_architecture }}"
+    BaseOS: "http://mirror.centos.org/centos/{{ major }}/BaseOS"
+    Packages: "{{ BaseOS }}/{{ arch }}/os/Packages"
+  set_fact:
+    version: "{{ version }}"
+    major: "{{ major }}"
+    centos_packages:
+      - "{{ Packages }}/centos-gpg-keys-{{ version }}.noarch.rpm"
+      - "{{ Packages }}/centos-release-{{ version }}.{{ arch }}.rpm"
+      - "{{ Packages }}/centos-repos-{{ version }}.{{ arch }}.rpm"
+      - "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ major }}.noarch.rpm"
+
+- name: ansible_distribution check
+  fail:
+    msg: >-
+      Cannot upgrade {{ ansible_distribution }}
+      {{ ansible_distribution_version }} to CentOS {{ version }}
+  when:
+    - ansible_distribution != "CentOS"
+##############################################################################
+# yum -> dnf
+##############################################################################
+- name: /usr/bin/yum
+  stat: path=/usr/bin/yum
+  register: yum
+
+- name: epel-release
+  package:
+    name: epel-release
+    state: latest
+  when:
+    - yum.stat.isreg is defined and yum.stat.isreg
+
+- name: yum-utils
+  package:
+    name: yum-utils
+    state: latest
+  when:
+    - yum.stat.isreg is defined and yum.stat.isreg
+
+# yum -y install rpmconf
+# rpmconf -a
+
+- name: package-cleanup
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - package-cleanup --leaves
+    - package-cleanup --orphans
+  when:
+    - yum.stat.isreg is defined and yum.stat.isreg
+
+- name: dnf
+  package:
+    name: dnf
+    state: latest
+  when:
+    - yum.stat.isreg is defined and yum.stat.isreg
+
+- name: yum -> dnf
+  shell: |-
+    dnf -y remove yum yum-metadata-parser
+    rm -rf /etc/yum
+    dnf -y upgrade
+  args:
+    warn: false
+  when:
+    - yum.stat.isreg is defined and yum.stat.isreg
+##############################################################################
+# CentOS Upgrade
+##############################################################################
+- name: CentOS Packages
+  dnf:
+    name: "{{ centos_packages }}"
+  when:
+    - ansible_distribution_major_version is version(major, "lt")
+
+- name: warn
+  debug:
+    msg: >-
+      Warning: CentOS Upgrade will install kernel and initiate reboot
+  when:
+    - ansible_distribution_major_version is version(major, "lt")
+
+- name: CentOS Upgrade
+  shell: |-
+    dnf clean all
+    rpm -e $(rpm -q kernel)
+    rpm -e --nodeps sysvinit-tools
+    dnf -y --releasever=8 --allowerasing --setopt=deltarpm=false distro-sync
+    dnf -y install kernel-core
+    dnf -y groupupdate "Core" "Minimal Install"
+    shutdown -r now
+  args:
+    warn: false
+  when:
+    - ansible_distribution_major_version is version(major, "lt")
+##############################################################################
+# Post Upgrade
+##############################################################################
+- name: Enable CentOS-Plus repository
+  ini_file:
+    dest: /etc/yum.repos.d/CentOS-centosplus.repo
+    create: no
+    section: centosplus
+    option: enabled
+    value: "1"
+
+- name: package update
+  package:
+    name: "*"
+    state: latest

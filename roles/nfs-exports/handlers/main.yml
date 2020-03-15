@@ -1,0 +1,7 @@
+# $Id: main.yml 5564 2020-03-15 22:43:06Z ball $
+---
+- name: restart nfs
+  service: "name={{ item }} enabled=yes state=restarted"
+  loop:
+    - nfs-client
+    - nfs-server

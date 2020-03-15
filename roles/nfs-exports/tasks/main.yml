@@ -1,0 +1,22 @@
+# $Id: main.yml 5564 2020-03-15 22:43:06Z ball $
+---
+- name: package install
+  package:
+    name:
+      - nfs-utils
+    state: latest
+
+- name: /etc/exports
+  vars:
+    hostset: "{{ (ansible_default_ipv4.network + '/' + ansible_default_ipv4.netmask) | ipaddr('net') }}"
+  lineinfile:
+    dest: /etc/exports
+    create: yes
+    regexp: "^{{ item.mount }}([ 	]|).*$"
+    line: "{{ item.mount + ' ' + hostset + '(rw,no_root_squash)' }}"
+  loop: "{{ ansible_mounts }}"
+  when:
+    - item.mount is match("/export/.+")
+  loop_control:
+    label: "{{ item.mount }}"
+  notify: [ "restart nfs" ]
