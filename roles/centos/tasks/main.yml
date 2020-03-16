@@ -44,9 +44,6 @@
   when:
     - yum.stat.isreg is defined and yum.stat.isreg
 
-# yum -y install rpmconf
-# rpmconf -a
-
 - name: package-cleanup
   command:
     cmd: "{{ item }}"
