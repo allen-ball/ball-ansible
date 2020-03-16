@@ -2,25 +2,25 @@
 ---
 - name: centos_packages
   vars:
-    version: 8.1-1.1911.0.8.el8
-    major: "{{ version | regex_replace('^([0-9]+)[.].*$', '\\1') }}"
+    target: 8.1-1.1911.0.8.el8
     arch: "{{ ansible_architecture }}"
-    BaseOS: "http://mirror.centos.org/centos/{{ major }}/BaseOS"
+    releasever: "{{ target | regex_replace('^([0-9]+)[.].*$', '\\1') }}"
+    BaseOS: "http://mirror.centos.org/centos/{{ releasever }}/BaseOS"
     Packages: "{{ BaseOS }}/{{ arch }}/os/Packages"
   set_fact:
-    version: "{{ version }}"
-    major: "{{ major }}"
+    releasever: "{{ releasever }}"
     centos_packages:
-      - "{{ Packages }}/centos-gpg-keys-{{ version }}.noarch.rpm"
-      - "{{ Packages }}/centos-release-{{ version }}.{{ arch }}.rpm"
-      - "{{ Packages }}/centos-repos-{{ version }}.{{ arch }}.rpm"
-      - "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ major }}.noarch.rpm"
+      - "{{ Packages }}/centos-gpg-keys-{{ target }}.noarch.rpm"
+      - "{{ Packages }}/centos-release-{{ target }}.{{ arch }}.rpm"
+      - "{{ Packages }}/centos-repos-{{ target }}.{{ arch }}.rpm"
+      - "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ releasever }}.noarch.rpm"
 
 - name: ansible_distribution check
   fail:
     msg: >-
-      Cannot upgrade {{ ansible_distribution }}
-      {{ ansible_distribution_version }} to CentOS {{ version }}
+      Cannot upgrade
+      {{ ansible_distribution }} {{ ansible_distribution_version }}
+      to CentOS {{ releasever }}
   when:
     - ansible_distribution != "CentOS"
 ##############################################################################
@@ -79,28 +79,28 @@
   dnf:
     name: "{{ centos_packages }}"
   when:
-    - ansible_distribution_major_version is version(major, "lt")
+    - ansible_distribution_major_version is version(releasever, "lt")
 
 - name: warn
   debug:
     msg: >-
       Warning: CentOS Upgrade will install kernel and initiate reboot
   when:
-    - ansible_distribution_major_version is version(major, "lt")
+    - ansible_distribution_major_version is version(releasever, "lt")
 
 - name: CentOS Upgrade
   shell: |-
     dnf clean all
     rpm -e $(rpm -q kernel)
     rpm -e --nodeps sysvinit-tools
-    dnf -y --releasever=8 --allowerasing --setopt=deltarpm=false distro-sync
+    dnf -y --releasever={{ releasever }} --allowerasing --setopt=deltarpm=false distro-sync
     dnf -y install kernel-core
     dnf -y groupupdate "Core" "Minimal Install"
     shutdown -r now
   args:
     warn: false
   when:
-    - ansible_distribution_major_version is version(major, "lt")
+    - ansible_distribution_major_version is version(releasever, "lt")
 ##############################################################################
 # Post Upgrade
 ##############################################################################
