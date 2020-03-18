@@ -1,0 +1,22 @@
+# $Id$
+---
+- name: ansible_os_family check
+  fail:
+    msg: >-
+      Expected RedHat; found {{ ansible_os_family }}
+  when:
+    - ansible_os_family != "RedHat"
+
+- name: /etc/yum.repos.d/mysql-community.repo install
+  vars:
+    el: "el{{ ansible_distribution_major_version }}"
+  package:
+    name:
+      - "http://dev.mysql.com/get/mysql80-community-release-{{ el }}-1.noarch.rpm"
+    state: latest
+
+- name: /etc/yum.repos.d/mysql-community.repo upgrade
+  package:
+    name:
+      - mysql80-community-release
+    state: latest
