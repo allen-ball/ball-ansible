@@ -11,12 +11,9 @@
   vars:
     el: "el{{ ansible_distribution_major_version }}"
   package:
-    name:
-      - "http://dev.mysql.com/get/mysql80-community-release-{{ el }}-1.noarch.rpm"
-    state: latest
+    name: "http://dev.mysql.com/get/mysql80-community-release-{{ el }}-1.noarch.rpm"
 
 - name: /etc/yum.repos.d/mysql-community.repo upgrade
   package:
-    name:
-      - mysql80-community-release
+    name: mysql80-community-release
     state: latest
