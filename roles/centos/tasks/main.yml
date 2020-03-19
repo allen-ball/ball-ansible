@@ -1,6 +1,6 @@
 # $Id: main.yml 5564 2020-03-15 22:43:06Z ball $
 ---
-- name: centos_packages
+- name: Role Parameters
   vars:
     target: 8.1-1.1911.0.8.el8
     arch: "{{ ansible_architecture }}"
@@ -26,6 +26,13 @@
 ##############################################################################
 # yum -> dnf
 ##############################################################################
+- name: ansible_os_family check
+  fail:
+    msg: >-
+      Expected RedHat; found {{ ansible_os_family }}
+  when:
+    - ansible_os_family != "RedHat"
+
 - name: /usr/bin/yum
   stat: path=/usr/bin/yum
   register: yum
@@ -102,14 +109,12 @@
 # Post Upgrade
 ##############################################################################
 - name: Enable CentOS-Plus repository
-  ini_file:
-    dest: /etc/yum.repos.d/CentOS-centosplus.repo
-    create: no
-    section: centosplus
-    option: enabled
-    value: "1"
+  shell: |-
+    dnf config-manager --enable centosplus
+  args:
+    warn: false
 
 - name: package update
-  package:
+  dnf:
     name: "*"
     state: latest
