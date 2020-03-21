@@ -1,3 +1,10 @@
+2020-03-21  Allen D. Ball  <ball@hcf.dev>
+
+	* roles/centos/tasks/main.yml:
+	Avoid using the "package" module after dnf has been installed but
+	also avoid using the "dnf" module until CentOS 8 and Python 3 are
+	installed in addition to dnf.
+
 2020-03-18  Allen D. Ball  <ball@hcf.dev>
 
 	* roles/yum-repo-mysql-community-release: Initial writing.

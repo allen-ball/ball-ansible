@@ -6,7 +6,6 @@
 - name: restart nfs
   service: "name={{ item }} enabled=yes state=restarted"
   loop:
-    - nfs-client
     - nfs-server
 
 - name: restart postfix

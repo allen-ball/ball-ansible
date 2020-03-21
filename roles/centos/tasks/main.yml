@@ -79,12 +79,6 @@
 ##############################################################################
 # CentOS Upgrade
 ##############################################################################
-- name: CentOS Packages
-  dnf:
-    name: "{{ centos_packages }}"
-  when:
-    - ansible_distribution_major_version is version(releasever, "lt")
-
 - name: warn
   debug:
     msg: >-
@@ -94,6 +88,7 @@
 
 - name: CentOS Upgrade
   shell: |-
+    dnf -y install {{ centos_packages | join(" ") }}
     dnf clean all
     rpm -e $(rpm -q kernel)
     rpm -e --nodeps sysvinit-tools
@@ -115,6 +110,6 @@
     warn: false
 
 - name: package update
-  dnf:
+  package:
     name: "*"
     state: latest
