@@ -109,6 +109,12 @@
   args:
     warn: false
 
+- name: package install
+  package:
+    name:
+      - policycoreutils-python-utils
+    state: latest
+
 - name: package update
   package:
     name: "*"
