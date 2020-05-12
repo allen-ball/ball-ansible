@@ -73,8 +73,21 @@
   pip:
     name:
       - certbot
-    executable: pip3
+    executable: /usr/local/bin/pip3
     state: "{{ domains | length | ternary('latest', 'absent') }}"
+
+- name: firewalld http
+  firewalld:
+    service: "{{ item }}"
+    immediate: yes
+    permanent: yes
+    state: enabled
+  loop:
+    - http
+    - https
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version is version("8", "ge")
 
 - name: certbot certonly
   vars:
