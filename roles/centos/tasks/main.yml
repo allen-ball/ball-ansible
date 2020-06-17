@@ -112,6 +112,7 @@
 - name: package install
   package:
     name:
+      - centos-release-stream
       - policycoreutils-python-utils
     state: latest
 
