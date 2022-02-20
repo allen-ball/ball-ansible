@@ -1,7 +1,5 @@
 # ball-ansible
 
-[//]: # ($Id$)
-
 A collection of miscellaneous [Ansible](https://www.ansible.com/) roles.
 
 For AWS:
