@@ -10,3 +10,12 @@ For AWS:
 For CentOS:
 
 * [roles/centos](roles/centos): [CentOS In-Place Upgrade](https://blog.hcf.dev/article/2020-03-15-centos-in-place-upgrade/)
+
+Add to `requirements.yml`:
+
+```yml
+collections:
+  - name: https://github.com/allen-ball/ball-ansible.git
+    type: git
+    version: trunk
+```

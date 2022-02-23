@@ -1,0 +1,13 @@
+namespace: ball
+name: ansible
+version: 1.0.0
+readme: README.md
+authors:
+  - Allen D. Ball <ball@hcf.dev>
+description: A collection of miscellaneous Ansible roles.
+license_file: LICENSE
+tags: []
+dependencies: {}
+repository: https://github.com/allen-ball/ball-ansible
+build_ignore: []
+
