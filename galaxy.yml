@@ -8,6 +8,6 @@ description: A collection of miscellaneous Ansible roles.
 license_file: LICENSE
 tags: []
 dependencies: {}
-repository: https://github.com/allen-ball/ball-ansible
+repository: https://github.com/allen-ball/ball-ansible.git
 build_ignore: []
 
